@@ -1,0 +1,92 @@
+# tasks file for ansible_role_install_prometheus
+
+- name: Ensure group "prometheus" exists
+  become: true
+  ansible.builtin.group:
+    name: "{{ user }}"
+    state: present
+
+- name: Add the user 'prometheus'
+  become: true
+  ansible.builtin.user:
+    name: "{{ user }}"
+    shell: '/bin/false'
+    create_home: false
+    group: "{{ user }}"
+
+- name: Unarchive a file that needs to be downloaded
+  ansible.builtin.unarchive:
+    src: "{{ src }}"
+    dest: "{{ dest }}"
+    remote_src: yes
+
+- name: Copy file 'prometheus' and 'promtool' to '/usr/local/bin'
+  become: true
+  ansible.builtin.copy:
+    src: "{{ dest }}/{{ dir }}/{{ item }}"
+    dest: /usr/local/bin/
+    remote_src: yes
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: preserve
+  with_items:
+    - "prometheus"
+    - "promtool"
+
+- name: Recursively change ownership of a directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    recurse: yes
+    owner: "{{ user }}"
+    group: "{{ user }}"
+  with_items:
+    - "{{ storage_path }}"
+    - "{{ prometheus_dir }}"
+  
+- name: Copy 'consoles' in '{{ prometheus_dir }}'
+  become: true
+  ansible.builtin.copy:
+    src: "{{ dest }}/{{ dir }}/{{ item }}"
+    dest: "{{ prometheus_dir }}"
+    remote_src: yes
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: preserve
+  with_items:
+    - consoles
+    - console_libraries
+
+- name: Copy config template on Prometheus
+  become: true
+  ansible.builtin.template:
+    src: "prometheus-conf.j2"
+    dest: "{{ prometheus_dir }}/prometheus.yml"
+    backup: yes
+    owner: "{{ user }}"
+    group: "{{ user }}"
+
+- name: Create a systemd unit 'prometheus.service'
+  become: true
+  ansible.builtin.template:
+    src: "prometheus.service.j2"
+    dest: "/etc/systemd/system/prometheus.service"
+    backup: yes
+
+- name: Daemon reload
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable service 'prometheus' and ensure it is started
+  become: true
+  ansible.builtin.systemd:
+    name: prometheus
+    enabled: true
+    state: started
+
+- name: Delete directory '{{ dest }}/{{ dir }}'
+  ansible.builtin.file:
+    state: absent
+    path: "{{ dest }}/{{ dir }}"   

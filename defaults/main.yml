@@ -1,0 +1,17 @@
+---
+# defaults file for ansible_role_install_prometheus
+#
+# Task variables
+user: "prometheus"
+dest: "/tmp"
+src: "https://github.com/prometheus/prometheus/releases/download/v2.47.2/prometheus-2.47.2.linux-amd64.tar.gz"
+dir: "prometheus-2.47.2.linux-amd64"
+storage_path: "/data"
+prometheus_dir: "/etc/prometheus"
+
+
+# Config variables
+scrape_interval: "10s"
+scrape_timeout: "10s"
+evaluation_interval: "15s"
+web_listen_address: "0.0.0.0:9090"
